@@ -2,7 +2,7 @@
 
 The full-size renders in ../wardrobe are up to 700x700 RGBA. Decoding ~40 of
 them at once costs ~80 MB of bitmap memory, which is too much for the
-original Kindle Fire's 512 MB. This writes 256 px, palette-reduced copies to
+Fire 7 (5th gen) tablet's 1 GB, shared with Fire OS itself. This writes 256 px, palette-reduced copies to
 kindle/img. Re-run it after adding items to wardrobe-data.js:
 
     python3 kindle/build_assets.py

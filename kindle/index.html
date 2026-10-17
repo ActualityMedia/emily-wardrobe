@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Emily's Wardrobe</title>
 <!--
-  Kindle Fire (1st gen, SV98LN) build of Emily's Wardrobe.
-  The stock Silk browser on that tablet is an Android 2.3-era WebKit with
-  512 MB of RAM behind it, so this page sticks to ES5, plain block/inline
+  Kindle Fire build of Emily's Wardrobe, for the Fire 7 (5th gen, 2015,
+  model SV98LN): 1 GB RAM, a 1.3 GHz Cortex-A7 and a Mali-450 GPU on
+  Fire OS 5 (Android 5.1). The desktop page's ~40 full-size images and
+  particle animations are too heavy for that, so this page uses small images
+  and no animations. It also sticks to ES5, plain block/inline
   layout (no flexbox, grid, CSS variables or calc), PNG instead of SVG,
   no animations, and small images from kindle/img (see build_assets.py).
   There are no modals or inner scroll areas: every screen is a normal page
@@ -708,8 +710,9 @@
     try{ x.send(null); }catch(e){ fail(); }
   }
   function fetchWeather(c){
-    // This tablet's browser can't negotiate the TLS that most HTTPS APIs
-    // require now, so use plain HTTP unless the page itself is on HTTPS.
+    // Opened from a file on the tablet there's no mixed-content rule, so use
+    // plain HTTP: Android 5.1's certificate store may not trust newer HTTPS
+    // certificates. On a hosted HTTPS page, HTTPS is required.
     var scheme = location.protocol==='https:' ? 'https:' : 'http:';
     var url=scheme+'//api.open-meteo.com/v1/forecast?latitude='+c.lat+'&longitude='+c.lon+
       '&current=temperature_2m,weather_code,wind_speed_10m'+
