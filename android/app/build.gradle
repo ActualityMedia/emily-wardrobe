@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The app shows the same page as kindle/index.html, bundled so it works
+// offline. Copy it (and the wardrobe list it loads from ../) into assets.
+def webAssets = layout.buildDirectory.dir('generated/webAssets')
+def copyWebAssets = tasks.register('copyWebAssets', Sync) {
+    from(rootProject.file('../kindle')) {
+        into 'kindle'
+        exclude '*.py', '*.md'
+    }
+    from(rootProject.file('../wardrobe-data.js'))
+    into webAssets
+}
+
+android {
+    namespace 'co.actualitymedia.emilywardrobe'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'co.actualitymedia.emilywardrobe'
+        // Fire 7 (5th gen) runs Fire OS 5, which is Android 5.1 (API 22)
+        minSdk 22
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    signingConfigs {
+        // A fixed key so each new APK installs over the last one. A fresh
+        // key would force an uninstall, which erases saved outfits.
+        release {
+            storeFile file('emily-wardrobe.keystore')
+            storePassword 'emilywardrobe'
+            keyAlias 'emily'
+            keyPassword 'emilywardrobe'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    sourceSets {
+        main.assets.srcDirs += webAssets
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+tasks.named('preBuild') { dependsOn copyWebAssets }
