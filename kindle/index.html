@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Emily's Wardrobe</title>
+<!--
+  Kindle Fire (1st gen, SV98LN) build of Emily's Wardrobe.
+  The stock Silk browser on that tablet is an Android 2.3-era WebKit with
+  512 MB of RAM behind it, so this page sticks to ES5, plain block/inline
+  layout (no flexbox, grid, CSS variables or calc), PNG instead of SVG,
+  no animations, and small images from kindle/img (see build_assets.py).
+  There are no modals or inner scroll areas: every screen is a normal page
+  reached by #hash, so the Kindle's back button works.
+-->
+<style>
+  *{margin:0; padding:0; -webkit-box-sizing:border-box; box-sizing:border-box;}
+  html{-webkit-text-size-adjust:none;}
+  body{background:#FBFAF9; color:#141414; font-family:"Helvetica Neue",Helvetica,Arial,"Droid Sans",sans-serif; -webkit-tap-highlight-color:rgba(0,0,0,0);}
+  body.season-spring{background:#F1F8EF;}
+  body.season-summer{background:#FDF6E6;}
+  body.season-autumn{background:#FAF1E4;}
+  body.season-winter{background:#EEF3FA;}
+
+  .wrap{padding:14px 14px 40px;}
+  h1{font-family:Didot,"Bodoni MT",Georgia,"Droid Serif",serif; font-size:22px; font-weight:normal; letter-spacing:4px; text-transform:uppercase;}
+  .count{margin-top:6px; font-size:11px; letter-spacing:2px; color:#8d8d8d; text-transform:uppercase; font-weight:bold;}
+
+  .weather{margin-top:10px; background:#fff; border:1px solid #e5e3e1; padding:8px 12px; display:inline-block; white-space:nowrap;}
+  .weather img, .weather .wMain, .weather .wStats{display:inline-block; vertical-align:middle;}
+  .weather img{width:40px; height:40px;}
+  .wMain{margin:0 12px 0 8px;}
+  .wTemp{font-family:Georgia,"Droid Serif",serif; font-size:24px; line-height:1;}
+  .wCond{font-size:9px; letter-spacing:1px; text-transform:uppercase; color:#8d8d8d; font-weight:bold; margin-top:3px;}
+  .wStats{border-left:1px solid #e5e3e1; padding-left:12px; font-size:9px; letter-spacing:1px; text-transform:uppercase; color:#8d8d8d; line-height:15px;}
+
+  .tabs{margin-top:12px; border-bottom:1px solid #e5e3e1;}
+  .tab{display:inline-block; padding:12px 9px 11px; font-size:11px; letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid transparent; margin-bottom:-1px;}
+  .tab.active{border-bottom-color:#141414; font-weight:bold;}
+
+  .filters{margin-top:10px;}
+  .chipRow{margin-bottom:4px;}
+  .chipLabel{display:inline-block; width:52px; font-size:10px; letter-spacing:2px; color:#8d8d8d; text-transform:uppercase; font-weight:bold;}
+  .chip{display:inline-block; border:1px solid #e5e3e1; background:#fff; padding:9px 12px; margin:0 5px 6px 0; font-size:10px; letter-spacing:1px; text-transform:uppercase; vertical-align:middle;}
+  .chip.active{background:#141414; color:#fff; border-color:#141414;}
+  .sw{display:inline-block; width:10px; height:10px; border-radius:5px; -webkit-border-radius:5px; border:1px solid #bbb; margin-right:5px; vertical-align:-1px;}
+
+  .grid{margin-top:14px;}
+  .item{display:inline-block; vertical-align:top; width:124px; margin:0 4px 16px 0; padding:6px 4px 4px; text-align:center; position:relative;}
+  .item img{width:112px; height:112px; display:block; margin:0 auto;}
+  .item .label{margin-top:6px; font-size:9px; letter-spacing:1px; text-transform:uppercase; font-weight:bold; color:#8d8d8d; height:24px; overflow:hidden;}
+  .item .badge{display:none; position:absolute; top:0; right:0; background:#E8638C; color:#fff; font-size:8px; letter-spacing:1px; padding:3px 6px; text-transform:uppercase;}
+  .item.inOutfit .badge{display:block;}
+  .item.inOutfit{background:#fff; outline:1px solid #E8638C;}
+
+  .empty{margin-top:40px; font-size:12px; letter-spacing:2px; color:#8d8d8d; text-transform:uppercase; line-height:24px; font-weight:bold;}
+
+  .card{display:inline-block; vertical-align:top; width:176px; margin:0 10px 14px 0; background:#fff; border:1px solid #e5e3e1; padding:14px 8px; text-align:center;}
+  .card h3{margin-top:10px; font-family:Georgia,"Droid Serif",serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; font-weight:normal; height:34px; overflow:hidden;}
+  .card .meta{margin-top:3px; font-size:9px; letter-spacing:1px; color:#8d8d8d; text-transform:uppercase; font-weight:bold;}
+  .newCard{display:inline-block; vertical-align:top; width:176px; height:178px; line-height:178px; border:1px dashed #cbc6bd; text-align:center; color:#8d8d8d; font-size:11px; letter-spacing:2px; text-transform:uppercase;}
+
+  /* small stacked outfit preview (cards, trips) */
+  .mini{text-align:center; white-space:nowrap;}
+  .mini img{display:block; margin:0 auto;}
+  .mini .torso{display:block; position:relative;}
+  .mini .torso img{display:inline-block; vertical-align:middle; position:relative;}
+  .mini .torso img.tp{z-index:1;}
+
+  /* the figure (builder + outfit detail) */
+  .fig{position:relative; margin:0 auto; background:#fff; border:1px solid #e5e3e1;}
+  .zone{position:absolute; left:0; right:0; text-align:center; white-space:nowrap;}
+  .zone img{height:100%; display:inline-block; vertical-align:top; position:relative;}
+  .zone img.tp{z-index:1;}
+  .ph{position:absolute; border:1px dashed #cfcabf; color:#8d8d8d; font-size:9px; letter-spacing:2px; text-transform:uppercase; font-weight:bold; text-align:center; background:#fff;}
+
+  .btn{display:inline-block; text-align:center; font-size:11px; letter-spacing:2px; text-transform:uppercase; padding:13px 16px; border:1px solid #141414; background:#141414; color:#fff; margin:0 8px 8px 0;}
+  .btn.ghost{background:#fff; color:#141414;}
+  .btn.danger{background:#fff; color:#b03030; border-color:#d8a7a7;}
+  .btn.wide{display:block; margin:0 0 8px;}
+  .back{display:inline-block; padding:10px 14px 10px 0; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#8d8d8d; font-weight:bold;}
+
+  /* builder */
+  .builder{background:#fff; border-bottom:1px solid #e5e3e1; padding:12px 14px; text-align:center;}
+  .builder h2, .detail h2{font-family:Georgia,"Droid Serif",serif; font-size:16px; letter-spacing:3px; text-transform:uppercase; font-weight:normal;}
+  .builder .sub{font-size:9px; letter-spacing:1px; color:#8d8d8d; text-transform:uppercase; font-weight:bold; margin:4px 0 8px;}
+  .builder .fig{border:none;}
+  .builder .acts{margin-top:8px; white-space:nowrap;}
+  .builder .acts .btn{margin:0 4px; padding:12px 14px;}
+  .fab{position:fixed; right:16px; bottom:16px; width:56px; height:56px; line-height:52px; border-radius:28px; -webkit-border-radius:28px; background:#141414; color:#fff; font-size:30px; text-align:center; z-index:20; -webkit-box-shadow:0 4px 12px rgba(0,0,0,.3);}
+  body.building .fab{display:none;}
+
+  .toast{position:fixed; left:0; right:0; bottom:18px; text-align:center; z-index:30; display:none;}
+  .toast span{display:inline-block; background:#141414; color:#fff; padding:10px 16px; font-size:11px; letter-spacing:1px; text-transform:uppercase;}
+
+  /* detail pages */
+  .detail{margin-top:6px;}
+  .detail .meta{margin-top:5px; font-size:10px; letter-spacing:1px; color:#8d8d8d; text-transform:uppercase; font-weight:bold;}
+  .detail .figCol{margin:14px 0;}
+  .detail .bigImg{display:block; width:256px; height:256px; margin:16px auto;}
+  .list li{list-style:none; padding:8px 0; border-bottom:1px solid #e5e3e1; overflow:hidden;}
+  .list li img{float:left; width:48px; height:48px; margin-right:12px;}
+  .list .nm{font-size:12px; font-weight:bold; padding-top:8px;}
+  .list .ct{margin-top:3px; font-size:9px; letter-spacing:1px; color:#8d8d8d; text-transform:uppercase; font-weight:bold;}
+  .sec{font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#8d8d8d; margin:20px 0 8px; font-weight:bold;}
+  .tile{display:inline-block; vertical-align:top; width:112px; margin:0 8px 10px 0; padding:8px 4px; text-align:center; background:#fff; border:1px solid #e5e3e1; position:relative;}
+  .tile.add{border-style:dashed;}
+  .tile .nm{margin-top:6px; font-size:9px; letter-spacing:1px; text-transform:uppercase; height:22px; overflow:hidden;}
+  .tile .pieceImg{width:72px; height:72px; display:block; margin:0 auto;}
+  .tile .x{position:absolute; top:-1px; right:-1px; width:28px; height:28px; line-height:26px; background:#fff; border:1px solid #e5e3e1; color:#8d8d8d; font-size:15px;}
+  .tile .plus{position:absolute; top:-1px; right:-1px; width:24px; height:24px; line-height:24px; background:#141414; color:#fff; font-size:14px;}
+  .note{font-size:10px; letter-spacing:1px; color:#8d8d8d; text-transform:uppercase;}
+  .acts{margin-top:18px;}
+
+  .admin{margin-top:36px; padding-top:12px; border-top:1px solid #e5e3e1;}
+  .admin h4{font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#8d8d8d; margin:8px 0 6px; font-weight:normal;}
+
+  /* Landscape (1024 x 600): put the weather beside the title, the builder
+     in a fixed column on the left, and detail pages in two columns. */
+  @media (max-width:699px){
+    .item{width:138px;}
+  }
+  @media (min-width:700px){
+    .weather{position:absolute; top:12px; right:14px; margin-top:0;}
+    body.building .builder{position:fixed; top:0; left:0; bottom:0; width:270px; border-bottom:none; border-right:1px solid #e5e3e1; z-index:10;}
+    body.building .wrap{margin-left:270px;}
+    body.building .weather{display:none;}
+    .detail .figCol{float:left; margin:0 24px 0 0;}
+    .detail .info{overflow:hidden;}
+  }
+</style>
+</head>
+<body>
+<div class="builder" id="builder" style="display:none">
+  <h2>New Outfit</h2>
+  <div class="sub">Tap pieces to add &middot; tap on figure to remove</div>
+  <div id="stack"></div>
+  <div class="acts">
+    <span class="btn" data-a="save">Save</span><span class="btn ghost" data-a="cancel">Cancel</span>
+  </div>
+</div>
+<div class="wrap" id="wrap">
+  <h1>Emily&rsquo;s Wardrobe</h1>
+  <div class="weather" id="weather">
+    <img id="wIcon" src="icons/cloud.png" alt=""><div class="wMain"><div class="wTemp" id="wTemp">--&deg;</div><div class="wCond" id="wCond">Loading&hellip;</div></div><div class="wStats"><div id="wHiLo">H --&deg; / L --&deg;</div><div id="wWind">Wind -- mph</div><div id="wRain">Rain --%</div></div>
+  </div>
+  <div id="main"></div>
+</div>
+<div class="fab" id="fab" data-a="new">+</div>
+<div class="toast" id="toast" data-a="toTop"><span id="toastText"></span></div>
+
+<script src="../wardrobe-data.js"></script>
+<script>
+(function(){
+  var CATS = [
+    {key:'all', label:'All'},
+    {key:'top', label:'Tops'},
+    {key:'jacket', label:'Jackets'},
+    {key:'bottom', label:'Bottoms'},
+    {key:'accessory', label:'Accessories'},
+    {key:'shoes', label:'Shoes'},
+    {key:'outfits', label:'Outfits'},
+    {key:'trips', label:'Trips'}
+  ];
+  var SLOTS = ['accessory','top','jacket','bottom','shoes'];
+  var items = (window.WARDROBE || []).slice();
+  for(var n=0;n<items.length;n++){
+    // small copies built by kindle/build_assets.py
+    items[n].thumb = 'img/'+items[n].image.split('/').pop();
+  }
+  var hasCat = {};
+  for(n=0;n<items.length;n++) hasCat[items[n].category]=true;
+  CATS = CATS.filter(function(c){ return c.key==='all'||c.key==='outfits'||c.key==='trips'||hasCat[c.key]; });
+
+  var DEFAULT_SCALE = {top:1, jacket:1.02, bottom:1, shoes:.38, accessory:.34};
+  // Desktop figure is 320 x 614 with a 172px unit; everything below is
+  // multiplied by a fit factor so it fits the Kindle's short screen.
+  var FIG = {w:320, h:614, unit:172, shoulders:138, waistband:282, feet:566, headTop:18};
+  var COLOR_HEX = {black:'#2b2430', grey:'#9b9b9b', white:'#ffffff', blue:'#3b6bc9',
+    navy:'#2c3e6b', pink:'#ef6fb4', red:'#d64545', green:'#4f9d69', olive:'#7a7a4d',
+    yellow:'#e8c547', orange:'#e88a3a', purple:'#8e5bb5', brown:'#8a6a52', tan:'#c9b291', cream:'#efe6d2', denim:'#4a6a96', rust:'#a8583f'};
+
+  var activeTab='all', typeFilter='all', colorFilter='all';
+  var building=false, draft={}, draftName='';
+  var closetScroll=0;
+
+  function $(id){ return document.getElementById(id); }
+  var main=$('main'), body=document.body;
+
+  // ---- tiny helpers (no classList / dataset / Object.assign on this browser) ----
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function hasClass(el,c){ return (' '+el.className+' ').indexOf(' '+c+' ')>=0; }
+  function addClass(el,c){ if(!hasClass(el,c)) el.className=(el.className?el.className+' ':'')+c; }
+  function removeClass(el,c){ el.className=(' '+el.className+' ').replace(' '+c+' ',' ').replace(/^\s+|\s+$/g,''); }
+  function copy(o){ var r={}; for(var k in o) if(o.hasOwnProperty(k)) r[k]=o[k]; return r; }
+  function uniq(a){ var s={}, r=[]; for(var i=0;i<a.length;i++) if(!s[a[i]]){ s[a[i]]=1; r.push(a[i]); } return r; }
+  function contains(a,v){ return a.indexOf(v)>=0; }
+  function px(v){ return Math.round(v)+'px'; }
+  function byId(id){ for(var i=0;i<items.length;i++) if(items[i].id===id) return items[i]; return null; }
+  function scaleOf(it){ return it.scale || DEFAULT_SCALE[it.category] || 1; }
+  function plural(n,w){ return n+' '+w+(n===1?'':'s'); }
+
+  function load(key){ try{ return JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ return []; } }
+  function store(key,v){ try{ localStorage.setItem(key, JSON.stringify(v)); }catch(e){ alert('Could not save on this device.'); } }
+  function loadOutfits(){ return load('emily-outfits'); }
+  function saveOutfits(o){ store('emily-outfits', o); }
+  function loadTrips(){ return load('emily-trips'); }
+  function saveTrips(t){ store('emily-trips', t); }
+  function outfitKey(o){ return o.created || o.name; }
+  function outfitByKey(k){ var o=loadOutfits(); for(var i=0;i<o.length;i++) if(outfitKey(o[i])===k) return o[i]; return null; }
+  function draftIds(){ var r=[]; for(var k in draft) if(draft[k]) r.push(draft[k]); return r; }
+
+  var toastTimer=null;
+  function toast(msg){
+    // in portrait the figure is above the grid, so offer a way back to it
+    $('toastText').innerHTML=esc(msg)+(window.innerWidth<700?' &middot; tap to see outfit':'');
+    $('toast').style.display='block';
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){ $('toast').style.display='none'; }, 1400);
+  }
+
+  // ---- Taps ----
+  // Every tappable element carries data-a="action:arg". One listener handles
+  // them all; touchend fires right away so taps skip the 300ms click delay.
+  var touch=null, lastTouch=0;
+  function actionEl(el){
+    while(el && el.getAttribute){
+      if(el.getAttribute('data-a')) return el;
+      el=el.parentNode;
+    }
+    return null;
+  }
+  document.addEventListener('touchstart', function(e){
+    var t=e.touches[0];
+    touch={x:t.clientX, y:t.clientY, el:actionEl(e.target)};
+  }, false);
+  document.addEventListener('touchmove', function(e){
+    if(!touch) return;
+    var t=e.touches[0];
+    if(Math.abs(t.clientX-touch.x)>10 || Math.abs(t.clientY-touch.y)>10) touch=null;
+  }, false);
+  document.addEventListener('touchend', function(e){
+    if(touch && touch.el){
+      e.preventDefault();
+      lastTouch=new Date().getTime();
+      var el=touch.el; touch=null;
+      act(el.getAttribute('data-a'));
+    }
+    touch=null;
+  }, false);
+  document.addEventListener('click', function(e){
+    var el=actionEl(e.target);
+    if(!el) return;
+    e.preventDefault();
+    if(new Date().getTime()-lastTouch<800) return;   // already handled by touchend
+    act(el.getAttribute('data-a'));
+  }, false);
+
+  function act(a){
+    var i=a.indexOf(':'), name=i<0?a:a.slice(0,i), arg=i<0?'':a.slice(i+1);
+    var h=ACTIONS[name];
+    if(h) h(arg);
+  }
+
+  // ---- Routing (#hash, so the hardware back button works) ----
+  function go(h){
+    if(location.hash===h) route(); else location.hash=h;
+  }
+  window.addEventListener('hashchange', route, false);
+
+  function route(){
+    var h=location.hash.replace(/^#\/?/,'');
+    var parts=h.split('/'), view=parts[0], arg=decodeURIComponent(parts[1]||'');
+    if(view==='item' && byId(arg)) return renderItem(byId(arg));
+    if(view==='outfit') return renderOutfit(parseInt(arg,10));
+    if(view==='trip') return renderTrip(parseInt(arg,10));
+    if(view==='outfits'||view==='trips') activeTab=view;
+    else if(view==='closet') activeTab=arg||'all';
+    renderCloset();
+  }
+
+  // ---- Closet (tabs, filters, grid / outfits / trips) ----
+  function catItems(){
+    if(activeTab==='all') return items;
+    return items.filter(function(i){ return i.category===activeTab; });
+  }
+  function header(){
+    var countText = activeTab==='trips' ? plural(loadTrips().length,'trip')
+      : activeTab==='outfits' ? plural(loadOutfits().length,'outfit')
+      : items.length+' pieces';
+    var h='<div class="count">'+countText+'</div><div class="tabs">';
+    for(var i=0;i<CATS.length;i++){
+      var c=CATS[i];
+      h+='<span class="tab'+(activeTab===c.key?' active':'')+'" data-a="tab:'+c.key+'">'+c.label+'</span>';
+    }
+    return h+'</div>';
+  }
+  function chipRow(label, values, current, action, swatches){
+    var h='<div class="chipRow">'+(label?'<span class="chipLabel">'+label+'</span>':'');
+    for(var i=0;i<values.length;i++){
+      var v=values[i];
+      h+='<span class="chip'+(current===v?' active':'')+'" data-a="'+action+':'+esc(v)+'">'+
+        (swatches && v!=='all' ? '<span class="sw" style="background:'+(COLOR_HEX[v]||'#ccc')+'"></span>' : '')+esc(v)+'</span>';
+    }
+    return h+'</div>';
+  }
+  function filters(){
+    var pool=catItems(), types=[], colors=[];
+    for(var i=0;i<pool.length;i++){
+      if(pool[i].type) types.push(pool[i].type);
+      colors=colors.concat(pool[i].colors||[]);
+    }
+    types=uniq(types).sort(); colors=uniq(colors).sort();
+    var h='<div class="filters">';
+    if(types.length>1) h+=chipRow('Type', ['all'].concat(types), typeFilter, 'type');
+    if(colors.length>1) h+=chipRow('Color', ['all'].concat(colors), colorFilter, 'color', true);
+    return h+'</div>';
+  }
+  function gridHtml(){
+    var list=catItems().filter(function(i){
+      return (typeFilter==='all'||i.type===typeFilter) &&
+             (colorFilter==='all'||contains(i.colors||[], colorFilter));
+    });
+    if(!list.length) return '<div class="empty">Nothing matches these filters.<br>Send Claude a photo of a clothing item to add more!</div>';
+    var inDraft=draftIds(), h='<div class="grid">';
+    for(var i=0;i<list.length;i++){
+      var it=list[i];
+      h+='<div class="item'+(contains(inDraft,it.id)?' inOutfit':'')+'" data-a="pick:'+it.id+'">'+
+        '<span class="badge">In outfit</span>'+
+        '<img src="'+it.thumb+'" alt="">'+
+        '<div class="label">'+esc(it.name)+'</div></div>';
+    }
+    return h+'</div>';
+  }
+
+  function miniStack(o, unit){
+    function g(s){ return o.items[s] && byId(o.items[s]); }
+    function H(it){ return Math.round(scaleOf(it)*unit); }
+    var acc=g('accessory'), top=g('top'), jkt=g('jacket'), bot=g('bottom'), sho=g('shoes');
+    var h='<div class="mini">';
+    if(acc) h+='<img style="height:'+H(acc)+'px; margin-bottom:-'+Math.round(unit*.09)+'px" src="'+acc.thumb+'">';
+    if(top||jkt){
+      h+='<div class="torso">'+
+        (jkt?'<img class="jkt" style="height:'+H(jkt)+'px'+(top?'; margin-right:-'+Math.round(unit*.45)+'px':'')+'" src="'+jkt.thumb+'">':'')+
+        (top?'<img class="tp" style="height:'+H(top)+'px" src="'+top.thumb+'">':'')+'</div>';
+    }
+    if(bot) h+='<img style="height:'+H(bot)+'px; margin-top:-'+Math.round(unit*.2)+'px" src="'+bot.thumb+'">';
+    if(sho) h+='<img style="height:'+H(sho)+'px; margin-top:-'+Math.round(unit*.12)+'px" src="'+sho.thumb+'">';
+    return h+'</div>';
+  }
+  function pieceCount(o){
+    var c=0; for(var i=0;i<SLOTS.length;i++) if(o.items[SLOTS[i]] && byId(o.items[SLOTS[i]])) c++;
+    return c;
+  }
+
+  function outfitsHtml(){
+    var outs=loadOutfits();
+    if(!outs.length) return '<div class="empty">No outfits yet!<br>Tap the + button and pick some pieces.</div>';
+    var h='<div class="grid">';
+    for(var i=0;i<outs.length;i++){
+      h+='<div class="card" data-a="outfit:'+i+'">'+miniStack(outs[i],56)+
+        '<h3>'+esc(outs[i].name)+'</h3><div class="meta">'+pieceCount(outs[i])+' pieces</div></div>';
+    }
+    return h+'</div>';
+  }
+  function tripsHtml(){
+    var trips=loadTrips(), h='<div class="grid">';
+    for(var i=0;i<trips.length;i++){
+      var outs=tripOutfits(trips[i]);
+      h+='<div class="card" data-a="trip:'+i+'">'+
+        (outs.length? miniStack(outs[0],34) : '<div class="note" style="height:110px; line-height:110px">Empty bag</div>')+
+        '<h3>'+esc(trips[i].name)+'</h3><div class="meta">'+plural(outs.length,'outfit')+' packed</div></div>';
+    }
+    return h+'<div class="newCard" data-a="newTrip">+ New trip</div></div>';
+  }
+  function tripOutfits(t){
+    var r=[];
+    for(var i=0;i<t.outfits.length;i++){ var o=outfitByKey(t.outfits[i]); if(o) r.push(o); }
+    return r;
+  }
+
+  function renderCloset(keepScroll){
+    var y=window.pageYOffset;
+    var h=header();
+    if(activeTab==='outfits') h+=outfitsHtml();
+    else if(activeTab==='trips') h+=tripsHtml();
+    else h+=filters()+gridHtml();
+    h+=adminHtml();
+    main.innerHTML=h;
+    $('weather').style.display='';
+    if(keepScroll) window.scrollTo(0,y);
+    else if(closetScroll){ window.scrollTo(0,closetScroll); closetScroll=0; }
+    if(building) renderStack();
+  }
+
+  // ---- Figure ----
+  // f: fit factor. Landscape fits the figure to the window height so Save
+  // and Cancel stay on screen; portrait uses a fixed size.
+  function fitFactor(){
+    var w=window.innerWidth, ht=window.innerHeight;
+    if(w>=700) return Math.max(.45, Math.min(.74, (ht-130)/FIG.h));
+    return .62;
+  }
+  function figureHtml(sel, interactive, f){
+    function get(s){ return sel[s] && byId(sel[s]); }
+    var acc=get('accessory'), top=get('top'), jkt=get('jacket'), bot=get('bottom'), sho=get('shoes');
+    var U=FIG.unit*f, W=FIG.w*f;
+    var h='<div class="fig" style="width:'+px(W)+'; height:'+px(FIG.h*f)+'">';
+    function rm(slot){ return interactive? ' data-a="rm:'+slot+'"' : ''; }
+    function zone(top, height, z, inner){ return '<div class="zone" style="top:'+px(top)+'; height:'+px(height)+'; z-index:'+z+'">'+inner+'</div>'; }
+    function ph(label, top, height, width, shift){
+      if(!interactive) return '';
+      return '<div class="ph" style="top:'+px(top)+'; height:'+px(height)+'; line-height:'+px(height)+'; width:'+px(width)+'; left:'+px((W-width)/2+(shift||0))+'">'+label+'</div>';
+    }
+    if(acc) h+=zone((FIG.headTop-6)*f, scaleOf(acc)*U, 5, '<img src="'+acc.thumb+'"'+rm('accessory')+'>');
+    else h+=ph('Accessory', 14*f, 46*f, 92*f, 100*f);
+    if(top||jkt){
+      var th=top? scaleOf(top)*U : 0, jh=jkt? scaleOf(jkt)*U*.97 : 0;
+      h+=zone((FIG.shoulders-8)*f, Math.max(th,jh), 3,
+        (jkt?'<img class="jkt" style="height:'+px(jh)+(top?'; margin-right:'+px(-56*f)+'; margin-top:'+px(6*f):'')+'" src="'+jkt.thumb+'"'+rm('jacket')+'>':'')+
+        (top?'<img class="tp" style="height:'+px(th)+'" src="'+top.thumb+'"'+rm('top')+'>':''));
+    } else h+=ph('Top', (FIG.shoulders-4)*f, 150*f, 150*f);
+    if(bot) h+=zone((FIG.waistband-6)*f, scaleOf(bot)*U, 2, '<img src="'+bot.thumb+'"'+rm('bottom')+'>');
+    else h+=ph('Bottom', FIG.waistband*f, 120*f, 130*f);
+    if(sho){
+      var sh=scaleOf(sho)*U;
+      h+=zone(FIG.feet*f-sh+4*f, sh, 2, '<img src="'+sho.thumb+'"'+rm('shoes')+'>');
+    } else h+=ph('Shoes', (FIG.feet-58)*f, 54*f, 110*f);
+    return h+'</div>';
+  }
+  function renderStack(){ $('stack').innerHTML=figureHtml(draft, true, fitFactor()); }
+
+  function startBuilder(prefill, name){
+    building=true; draft=copy(prefill||{}); draftName=name||'';
+    addClass(body,'building');
+    $('builder').style.display='block';
+    if(activeTab==='outfits'||activeTab==='trips') activeTab='all';
+    go('#closet/'+activeTab);
+    renderStack();
+  }
+  function stopBuilder(){
+    building=false; draft={}; draftName='';
+    removeClass(body,'building');
+    $('builder').style.display='none';
+  }
+  function refreshDraft(){ renderStack(); renderCloset(true); }
+
+  // ---- Item page ----
+  function itemMeta(it){ return [it.brand, it.type, (it.colors||[]).join('/'), it.category].filter(function(x){return x;}).join(' — '); }
+  function renderItem(it){
+    $('weather').style.display='none';
+    main.innerHTML='<span class="back" data-a="back">&larr; Back</span>'+
+      '<div class="detail" style="text-align:center">'+
+      '<img class="bigImg" src="'+it.thumb+'" alt="">'+
+      '<h2>'+esc(it.name)+'</h2><div class="meta">'+esc(itemMeta(it))+'</div>'+
+      '<div class="acts"><span class="btn" data-a="addItem:'+it.id+'">Add to outfit</span><span class="btn ghost" data-a="back">Close</span></div></div>';
+    window.scrollTo(0,0);
+  }
+
+  // ---- Outfit page ----
+  function renderOutfit(idx){
+    var o=loadOutfits()[idx];
+    if(!o) return go('#outfits');
+    $('weather').style.display='none';
+    var list=[];
+    var order=['accessory','jacket','top','bottom','shoes'];
+    for(var i=0;i<order.length;i++){ var it=o.items[order[i]] && byId(o.items[order[i]]); if(it) list.push(it); }
+    var date=o.created? new Date(o.created).toLocaleDateString() : '';
+    var h='<span class="back" data-a="back">&larr; Outfits</span><div class="detail">'+
+      '<div class="figCol">'+figureHtml(o.items, false, window.innerWidth>=700? Math.max(.5,Math.min(.75,(window.innerHeight-60)/FIG.h)) : .6)+'</div>'+
+      '<div class="info"><h2>'+esc(o.name)+'</h2><div class="meta">'+list.length+' pieces'+(date?' — saved '+esc(date):'')+'</div><ul class="list">';
+    for(i=0;i<list.length;i++){
+      h+='<li><img src="'+list[i].thumb+'"><div class="nm">'+esc(list[i].name)+'</div><div class="ct">'+esc(itemMeta(list[i]))+'</div></li>';
+    }
+    h+='</ul><div class="sec">Add to trip</div>';
+    var key=outfitKey(o), trips=loadTrips();
+    for(i=0;i<trips.length;i++){
+      var inTrip=contains(trips[i].outfits,key);
+      h+='<span class="chip'+(inTrip?' active':'')+'" data-a="toggleTrip:'+idx+','+i+'">'+(inTrip?'&#10003; ':'+ ')+esc(trips[i].name)+'</span>';
+    }
+    h+='<span class="chip" data-a="newTripWith:'+idx+'">+ New trip</span>'+
+      '<div class="acts"><span class="btn" data-a="edit:'+idx+'">Edit in builder</span><span class="btn danger" data-a="del:'+idx+'">Delete</span></div>'+
+      '</div></div>';
+    main.innerHTML=h;
+    window.scrollTo(0,0);
+  }
+
+  // ---- Trip page ----
+  function renderTrip(idx){
+    var trips=loadTrips(), t=trips[idx];
+    if(!t) return go('#trips');
+    $('weather').style.display='none';
+    t.items=t.items||[];
+    var outs=tripOutfits(t), allOuts=loadOutfits(), i, it;
+    var h='<span class="back" data-a="back">&larr; Trips</span><div class="detail">'+
+      '<h2>'+esc(t.name)+'</h2><div class="meta">'+plural(outs.length,'outfit')+(t.items.length?' + '+plural(t.items.length,'piece'):'')+'</div>';
+
+    h+='<div class="sec">Outfits in this trip</div>';
+    if(!outs.length) h+='<div class="note">Nothing packed yet — add outfits below.</div>';
+    for(i=0;i<outs.length;i++){
+      h+='<div class="tile">'+miniStack(outs[i],26)+'<div class="nm">'+esc(outs[i].name)+'</div><span class="x" data-a="tripDropOutfit:'+idx+','+i+'">&times;</span></div>';
+    }
+
+    h+='<div class="sec">Add an outfit</div>';
+    var avail=[];
+    for(i=0;i<allOuts.length;i++) if(!contains(t.outfits,outfitKey(allOuts[i]))) avail.push(i);
+    if(!avail.length) h+='<div class="note">'+(allOuts.length?'All outfits are packed.':'No saved outfits yet — build some first!')+'</div>';
+    for(i=0;i<avail.length;i++){
+      var o=allOuts[avail[i]];
+      h+='<div class="tile add" data-a="tripAddOutfit:'+idx+','+avail[i]+'">'+miniStack(o,26)+'<div class="nm">'+esc(o.name)+'</div><span class="plus">+</span></div>';
+    }
+
+    h+='<div class="sec">Individual pieces</div>';
+    var solo=[];
+    for(i=0;i<t.items.length;i++){ it=byId(t.items[i]); if(it) solo.push(it); }
+    if(!solo.length) h+='<div class="note">No single pieces added.</div>';
+    for(i=0;i<solo.length;i++){
+      h+='<div class="tile"><img class="pieceImg" src="'+solo[i].thumb+'"><div class="nm">'+esc(solo[i].name)+'</div><span class="x" data-a="tripDropItem:'+idx+','+solo[i].id+'">&times;</span></div>';
+    }
+
+    h+='<div class="sec">Add a piece</div>';
+    var more=items.filter(function(x){ return !contains(t.items,x.id); });
+    if(!more.length) h+='<div class="note">Everything is already in the bag.</div>';
+    for(i=0;i<more.length;i++){
+      h+='<div class="tile add" data-a="tripAddItem:'+idx+','+more[i].id+'"><img class="pieceImg" src="'+more[i].thumb+'"><div class="nm">'+esc(more[i].name)+'</div><span class="plus">+</span></div>';
+    }
+
+    // packing list: unique pieces from outfits + individual adds
+    h+='<div class="sec">Packing list</div><ul class="list">';
+    var useCount={}, isSolo={}, ids=[], k;
+    for(i=0;i<outs.length;i++){
+      for(k in outs[i].items){ var id=outs[i].items[k]; if(!id) continue; if(!(id in useCount)){ useCount[id]=0; ids.push(id); } useCount[id]++; }
+    }
+    for(i=0;i<t.items.length;i++){ isSolo[t.items[i]]=true; if(!(t.items[i] in useCount)){ useCount[t.items[i]]=0; ids.push(t.items[i]); } }
+    var pack=[];
+    for(i=0;i<ids.length;i++){ it=byId(ids[i]); if(it) pack.push(it); }
+    pack.sort(function(a,b){ return a.category<b.category?-1:a.category>b.category?1:0; });
+    if(!pack.length) h+='<li class="note" style="border:none">Empty — pack an outfit or a piece to build the list.</li>';
+    for(i=0;i<pack.length;i++){
+      var notes=[];
+      if(useCount[pack[i].id]>1) notes.push('worn in '+useCount[pack[i].id]+' outfits');
+      if(isSolo[pack[i].id]) notes.push('added individually');
+      h+='<li><img src="'+pack[i].thumb+'"><div class="nm">'+esc(pack[i].name)+'</div><div class="ct">'+pack[i].category+(notes.length?' — '+notes.join(', '):'')+'</div></li>';
+    }
+    h+='</ul><div class="acts"><span class="btn ghost" data-a="tripRename:'+idx+'">Rename</span><span class="btn danger" data-a="tripDelete:'+idx+'">Delete trip</span></div></div>';
+    main.innerHTML=h;
+  }
+
+  // ---- Actions ----
+  function pair(arg){ var p=arg.split(','); return [parseInt(p[0],10), p.slice(1).join(',')]; }
+  var ACTIONS = {
+    tab: function(k){ typeFilter='all'; colorFilter='all'; go(k==='outfits'||k==='trips' ? '#'+k : '#closet/'+k); },
+    type: function(v){ typeFilter=v; renderCloset(true); },
+    color: function(v){ colorFilter=v; renderCloset(true); },
+    pick: function(id){
+      var it=byId(id); if(!it) return;
+      if(building){ draft[it.category]=it.id; toast('Added '+it.name); refreshDraft(); }
+      else { closetScroll=window.pageYOffset; go('#item/'+encodeURIComponent(id)); }
+    },
+    addItem: function(id){
+      var it=byId(id); if(!it) return;
+      if(!building) startBuilder(draft);
+      draft[it.category]=it.id;
+      closetScroll=0;
+      go('#closet/'+activeTab);
+      refreshDraft();
+    },
+    rm: function(slot){ delete draft[slot]; refreshDraft(); },
+    toTop: function(){ $('toast').style.display='none'; window.scrollTo(0,0); },
+    'new': function(){ startBuilder(); },
+    cancel: function(){ stopBuilder(); renderCloset(true); },
+    save: function(){
+      if(draftIds().length<2){ alert('Pick at least two pieces!'); return; }
+      var outs=loadOutfits();
+      var name=prompt('Outfit name?', draftName||('Outfit '+(outs.length+1)));
+      if(name===null) return;
+      outs.unshift({ name: name.replace(/^\s+|\s+$/g,'') || ('Outfit '+(outs.length+1)), items: copy(draft), created: new Date().toISOString() });
+      saveOutfits(outs);
+      stopBuilder();
+      go('#outfits');
+    },
+    back: function(){ history.back(); },
+    outfit: function(i){ go('#outfit/'+i); },
+    trip: function(i){ go('#trip/'+i); },
+    edit: function(i){ var o=loadOutfits()[parseInt(i,10)]; if(o){ activeTab='all'; startBuilder(o.items, o.name); } },
+    del: function(i){
+      var outs=loadOutfits(), o=outs[parseInt(i,10)];
+      if(o && confirm('Delete "'+o.name+'"?')){ outs.splice(parseInt(i,10),1); saveOutfits(outs); go('#outfits'); }
+    },
+    toggleTrip: function(arg){
+      var p=pair(arg), o=loadOutfits()[p[0]], trips=loadTrips(), t=trips[parseInt(p[1],10)];
+      if(!o||!t) return;
+      var key=outfitKey(o);
+      if(contains(t.outfits,key)) t.outfits=t.outfits.filter(function(k){ return k!==key; });
+      else t.outfits.push(key);
+      saveTrips(trips); renderOutfit(p[0]);
+    },
+    newTripWith: function(i){
+      var o=loadOutfits()[parseInt(i,10)]; if(!o) return;
+      var name=prompt('Trip name? (e.g. Lake weekend)');
+      if(!name) return;
+      var trips=loadTrips();
+      trips.unshift({name:name.replace(/^\s+|\s+$/g,''), outfits:[outfitKey(o)], created:new Date().toISOString()});
+      saveTrips(trips); renderOutfit(parseInt(i,10));
+    },
+    newTrip: function(){
+      var name=prompt('Trip name? (e.g. Lake weekend)');
+      if(!name) return;
+      var trips=loadTrips();
+      trips.unshift({name:name.replace(/^\s+|\s+$/g,''), outfits:[], created:new Date().toISOString()});
+      saveTrips(trips); renderCloset(true);
+    },
+    tripDropOutfit: function(arg){
+      var p=pair(arg), trips=loadTrips(), t=trips[p[0]]; if(!t) return;
+      var o=tripOutfits(t)[parseInt(p[1],10)]; if(!o) return;
+      var key=outfitKey(o);
+      t.outfits=t.outfits.filter(function(k){ return k!==key; });
+      saveTrips(trips); renderTrip(p[0]);
+    },
+    tripAddOutfit: function(arg){
+      var p=pair(arg), trips=loadTrips(), t=trips[p[0]], o=loadOutfits()[parseInt(p[1],10)];
+      if(!t||!o) return;
+      t.outfits.push(outfitKey(o)); saveTrips(trips); renderTrip(p[0]);
+    },
+    tripDropItem: function(arg){
+      var p=pair(arg), trips=loadTrips(), t=trips[p[0]]; if(!t) return;
+      t.items=(t.items||[]).filter(function(x){ return x!==p[1]; });
+      saveTrips(trips); renderTrip(p[0]);
+    },
+    tripAddItem: function(arg){
+      var p=pair(arg), trips=loadTrips(), t=trips[p[0]]; if(!t) return;
+      t.items=t.items||[]; t.items.push(p[1]); saveTrips(trips); renderTrip(p[0]);
+    },
+    tripRename: function(i){
+      var trips=loadTrips(), t=trips[parseInt(i,10)]; if(!t) return;
+      var name=prompt('New trip name:', t.name);
+      if(name){ t.name=name.replace(/^\s+|\s+$/g,''); saveTrips(trips); renderTrip(parseInt(i,10)); }
+    },
+    tripDelete: function(i){
+      var trips=loadTrips(), t=trips[parseInt(i,10)];
+      if(t && confirm('Delete trip "'+t.name+'"? (Outfits stay saved.)')){ trips.splice(parseInt(i,10),1); saveTrips(trips); go('#trips'); }
+    },
+    season: function(v){ seasonPick=v; setSeason(v==='auto'?autoSeason():v); renderCloset(true); },
+    weather: function(v){
+      weatherPick=v;
+      if(v==='live'){ if(live) showWeather(live); }
+      else { $('wIcon').src='icons/'+v+'.png'; $('wCond').innerHTML=esc(LABELS[v]+' (test)'); }
+      renderCloset(true);
+    }
+  };
+
+  // ---- Seasons + weather ----
+  // The desktop version animates rain, snow, leaves and clouds across the
+  // page. That is far too heavy for this tablet, so seasons only tint the
+  // background and weather is just the little dashboard.
+  var SEASONS=['spring','summer','autumn','winter'];
+  var KINDS=['clear','partly','cloud','fog','rain','snow','storm'];
+  var LABELS={clear:'Clear skies',partly:'Partly cloudy',cloud:'Cloudy',fog:'Foggy',rain:'Rainy',snow:'Snowy',storm:'Thunderstorms'};
+  var seasonPick='auto', weatherPick='live', live=null;
+
+  function autoSeason(){
+    var m=new Date().getMonth()+1;
+    return (m>=3&&m<=5)?'spring':(m>=6&&m<=8)?'summer':(m>=9&&m<=11)?'autumn':'winter';
+  }
+  function setSeason(s){
+    for(var i=0;i<SEASONS.length;i++) removeClass(body,'season-'+SEASONS[i]);
+    addClass(body,'season-'+s);
+  }
+  function adminHtml(){
+    if(activeTab==='outfits'||activeTab==='trips') return '';
+    return '<div class="admin"><h4>Season (testing)</h4>'+chipRow('', ['auto'].concat(SEASONS), seasonPick, 'season')+
+      '<h4>Weather (testing)</h4>'+chipRow('', ['live'].concat(KINDS), weatherPick, 'weather')+'</div>';
+  }
+
+  function kindOf(code){
+    if(code===0) return ['clear','Clear skies'];
+    if(code<=2) return ['partly','Partly cloudy'];
+    if(code===3) return ['cloud','Cloudy'];
+    if(code===45||code===48) return ['fog','Foggy'];
+    if(code>=51&&code<=57) return ['rain','Drizzle'];
+    if(code>=61&&code<=67) return ['rain','Rainy'];
+    if(code>=71&&code<=77) return ['snow','Snowy'];
+    if(code>=80&&code<=82) return ['rain','Rain showers'];
+    if(code===85||code===86) return ['snow','Snow showers'];
+    if(code>=95) return ['storm','Thunderstorms'];
+    return ['cloud','—'];
+  }
+  function showWeather(w){
+    $('wIcon').src='icons/'+w.kind+'.png';
+    $('wTemp').innerHTML=w.temp+'&deg;';
+    $('wCond').innerHTML=esc(w.label+(w.wind>=18?' & windy':''));
+    $('wHiLo').innerHTML='H '+w.hi+'&deg; / L '+w.lo+'&deg;';
+    $('wWind').innerHTML='Wind '+w.wind+' mph';
+    $('wRain').innerHTML='Rain '+w.rain+'%';
+  }
+  function weatherOffline(){
+    $('wCond').innerHTML='Weather offline';
+    $('wIcon').src='icons/cloud.png';
+  }
+  function getJSON(url, ok, fail){
+    var x=new XMLHttpRequest();
+    x.open('GET', url, true);
+    x.onreadystatechange=function(){
+      if(x.readyState!==4) return;
+      if(x.status===200){ try{ ok(JSON.parse(x.responseText)); return; }catch(e){} }
+      fail();
+    };
+    try{ x.send(null); }catch(e){ fail(); }
+  }
+  function fetchWeather(c){
+    // This tablet's browser can't negotiate the TLS that most HTTPS APIs
+    // require now, so use plain HTTP unless the page itself is on HTTPS.
+    var scheme = location.protocol==='https:' ? 'https:' : 'http:';
+    var url=scheme+'//api.open-meteo.com/v1/forecast?latitude='+c.lat+'&longitude='+c.lon+
+      '&current=temperature_2m,weather_code,wind_speed_10m'+
+      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max'+
+      '&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=1';
+    getJSON(url, function(j){
+      var cur=j.current, day=j.daily, kc=kindOf(cur.weather_code);
+      var rain=day.precipitation_probability_max[0];
+      live={kind:kc[0], label:kc[1], temp:Math.round(cur.temperature_2m), wind:Math.round(cur.wind_speed_10m),
+        hi:Math.round(day.temperature_2m_max[0]), lo:Math.round(day.temperature_2m_min[0]), rain:(rain!=null?rain:'--')};
+      if(weatherPick==='live') showWeather(live);
+    }, weatherOffline);
+  }
+  function getCoords(cb){
+    var done=false;
+    function fin(c){
+      if(done) return; done=true;
+      try{ localStorage.setItem('emily-coords', JSON.stringify(c)); }catch(e){}
+      cb(c);
+    }
+    var saved=null;
+    try{ saved=JSON.parse(localStorage.getItem('emily-coords')||'null'); }catch(e){}
+    var fallback=saved || {lat:41.5, lon:-81.7};   // default: northern Ohio
+    if(navigator.geolocation){
+      try{
+        navigator.geolocation.getCurrentPosition(
+          function(p){ fin({lat:Math.round(p.coords.latitude*100)/100, lon:Math.round(p.coords.longitude*100)/100}); },
+          function(){ fin(fallback); }, {timeout:5000, maximumAge:6*3600*1000});
+      }catch(e){ fin(fallback); }
+      setTimeout(function(){ fin(fallback); }, 6000);
+    } else fin(fallback);
+  }
+
+  function onResize(){ if(building) renderStack(); }
+  window.addEventListener('resize', onResize, false);
+  window.addEventListener('orientationchange', function(){ setTimeout(onResize, 300); }, false);
+
+  setSeason(autoSeason());
+  route();
+  getCoords(fetchWeather);
+})();
+</script>
+</body>
+</html>
