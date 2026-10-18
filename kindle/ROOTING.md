@@ -26,8 +26,8 @@ can't push an update halfway through.
 
 ## 2. What you need
 
-- A computer that can boot **Linux** (an Ubuntu live USB stick is fine; the
-  scripts don't work on Windows or macOS).
+- A computer running **Linux**. An installed Ubuntu or Linux Mint works, and
+  so does an Ubuntu live USB stick. The scripts don't work on Windows or macOS.
 - A good micro-USB **data** cable.
 - For firmware 5.3.3 and newer: plastic pry tools and fine tweezers or a bent
   paperclip.
@@ -40,14 +40,22 @@ can't push an update halfway through.
 
 ## 3. Set up the Linux computer
 
+These commands are for Ubuntu and Linux Mint (Mint is built on Ubuntu, so
+nothing else changes):
+
 ```
 sudo apt update
-sudo add-apt-repository universe
-sudo apt install python3 python3-serial android-tools-adb android-tools-fastboot
+sudo apt install python3 python3-serial adb fastboot
 sudo systemctl stop ModemManager
 sudo systemctl disable ModemManager
 sudo adduser $USER dialout     # then log out and back in
 ```
+
+Stopping ModemManager matters: it grabs new USB serial devices to check
+whether they're modems, which interrupts the bootrom step. Re-enable it
+afterwards with `sudo systemctl enable --now ModemManager` if you use a
+mobile-broadband modem. On an Ubuntu live USB, run
+`sudo add-apt-repository universe` before installing.
 
 Unzip the amonet package and `cd` into its folder.
 
