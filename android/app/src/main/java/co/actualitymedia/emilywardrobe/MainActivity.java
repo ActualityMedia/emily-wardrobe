@@ -2,9 +2,15 @@ package co.actualitymedia.emilywardrobe;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -20,6 +26,14 @@ public class MainActivity extends Activity {
     private static final String START_URL = "file:///android_asset/kindle/index.html";
 
     private WebView web;
+
+    // keeps the screen on while the tablet is plugged in, off on battery
+    private final BroadcastReceiver powerReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            updateKeepScreenOn(intent);
+        }
+    };
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -81,6 +95,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        unregisterReceiver(powerReceiver);
         web.onPause();
     }
 
@@ -88,6 +103,16 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         web.onResume();
+        // battery status is sticky, so this also returns the current state
+        updateKeepScreenOn(registerReceiver(powerReceiver,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)));
+    }
+
+    private void updateKeepScreenOn(Intent battery) {
+        boolean pluggedIn = battery != null
+                && battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
+        if (pluggedIn) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     @Override

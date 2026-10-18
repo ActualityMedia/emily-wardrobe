@@ -27,7 +27,17 @@ app on GitHub Actions ("Kindle app" workflow).
 4. Optional: turn **Apps from Unknown Sources** back off.
 
 The app turns to landscape or portrait as you rotate the tablet, even when
-the Fire's rotation lock is on.
+the Fire's rotation lock is on. While it's open and the tablet is plugged in,
+the screen stays on; on battery it sleeps as normal.
+
+## Keep the whole tablet awake while charging
+
+The app keeps the screen on by itself while it's open. To stop the Fire
+sleeping on any screen whenever it's plugged in:
+
+1. **Settings > Device Options**, then tap **Serial Number** 7 times.
+   **Developer Options** appears in Device Options.
+2. Open **Developer Options** and turn on **Stay awake**.
 
 ## Updating
 
