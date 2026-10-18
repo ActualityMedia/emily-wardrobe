@@ -26,6 +26,9 @@ app on GitHub Actions ("Kindle app" workflow).
 3. Open **Emily's Wardrobe** from the home screen.
 4. Optional: turn **Apps from Unknown Sources** back off.
 
+The app turns to landscape or portrait as you rotate the tablet, even when
+the Fire's rotation lock is on.
+
 ## Updating
 
 Install the new APK the same way. It's signed with the same key every time
