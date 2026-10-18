@@ -21,6 +21,13 @@ or replace Fire OS with a custom ROM.
 "Your tablet is running Fire OS 5.x.x.x". Write it down. It decides which path
 you take in step 4.
 
+**Fire OS 5.7.0.0** (the last update Amazon released for this tablet, as far
+as I can tell) is newer than 5.3.3, so it needs the open-the-case route in
+step 4. Amazon blocked the no-tools route in 5.3.3 by patching the
+preloader; amonet works below that, in the chip's bootrom, so the firmware
+version doesn't stop it, but the tablet has to be forced into bootrom mode by
+hand.
+
 While you're there, keep the tablet **off Wi-Fi** until you're done, so Amazon
 can't push an update halfway through.
 
